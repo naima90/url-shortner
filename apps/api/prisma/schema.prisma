@@ -1,0 +1,70 @@
+// Prisma schema: the data tier.
+// This describes the four tables the app uses and how they relate.
+// Run `npm run migrate --workspace=apps/api` to turn this into SQL migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A registered user. We only ever store the argon2 hash of the password,
+// never the password itself.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  links         Link[]
+  refreshTokens RefreshToken[]
+}
+
+// Refresh tokens are stored hashed so a database leak does not hand out live
+// sessions. Setting revokedAt lets us invalidate a session on logout or breach.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// A short link. `code` is the bit after the slash, whether it was auto-generated
+// or chosen by the user. Both live in one unique namespace so we never have to
+// reconcile two separate uniqueness rules.
+model Link {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  isCustomAlias Boolean   @default(false)
+  originalUrl   String
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  expiresAt     DateTime? // reserved for a future "link expiry" feature; not enforced yet
+  createdAt     DateTime  @default(now())
+
+  clicks ClickEvent[]
+
+  @@index([ownerId])
+}
+
+// One row per redirect. The visitor IP is never stored raw: we keep a salted
+// hash instead, so we can still spot abuse patterns without holding personal data.
+model ClickEvent {
+  id        String   @id @default(cuid())
+  linkId    String
+  link      Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  clickedAt DateTime @default(now())
+  referrer  String?
+  userAgent String?
+  ipHash    String?
+
+  @@index([linkId, clickedAt])
+}

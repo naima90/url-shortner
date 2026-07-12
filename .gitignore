@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Env files (never commit real secrets, only the .example variants)
+.env
+.env.local
+.env.*.local
+.env.test
+
+# Build output
+dist/
+apps/web/.next/
+apps/web/out/
+packages/shared/dist/
+*.tsbuildinfo
+
+# Test + coverage artifacts
+coverage/
+playwright-report/
+test-results/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
