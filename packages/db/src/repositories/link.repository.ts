@@ -1,5 +1,5 @@
 // Data access for links. Only place link queries touch Prisma.
-import { prisma } from '../lib/prisma';
+import { prisma } from '../client';
 
 export const linkRepository = {
   findByCode(code: string) {

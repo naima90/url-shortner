@@ -2,10 +2,11 @@
 // need no database. They check the logic: reserved-alias rejection, collision
 // retry, and ownership enforcement on delete.
 import { linkService } from '../../src/services/link.service';
-import { linkRepository } from '../../src/repositories/link.repository';
+import { linkRepository } from '@url-shortner/db';
+import { invalidateLinkCache } from '../../src/lib/linkCache';
 
 // Replace the repository with jest mocks.
-jest.mock('../../src/repositories/link.repository', () => ({
+jest.mock('@url-shortner/db', () => ({
   linkRepository: {
     findByCode: jest.fn(),
     findById: jest.fn(),
@@ -15,7 +16,14 @@ jest.mock('../../src/repositories/link.repository', () => ({
   },
 }));
 
+// Delete also invalidates the redirect cache; mock it so this stays a fast,
+// Redis-free unit test.
+jest.mock('../../src/lib/linkCache', () => ({
+  invalidateLinkCache: jest.fn(),
+}));
+
 const mockRepo = linkRepository as jest.Mocked<typeof linkRepository>;
+const mockInvalidateLinkCache = invalidateLinkCache as jest.MockedFunction<typeof invalidateLinkCache>;
 
 describe('linkService.create', () => {
   it('rejects a reserved custom alias', async () => {
@@ -70,9 +78,10 @@ describe('linkService.delete', () => {
   });
 
   it('deletes a link the user owns', async () => {
-    mockRepo.findById.mockResolvedValueOnce({ id: 'l1', ownerId: 'user1' } as never);
+    mockRepo.findById.mockResolvedValueOnce({ id: 'l1', ownerId: 'user1', code: 'mylink' } as never);
     mockRepo.delete.mockResolvedValueOnce({} as never);
     await linkService.delete('user1', 'l1');
     expect(mockRepo.delete).toHaveBeenCalledWith('l1');
+    expect(mockInvalidateLinkCache).toHaveBeenCalledWith('mylink');
   });
 });

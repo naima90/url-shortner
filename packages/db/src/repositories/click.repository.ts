@@ -1,5 +1,5 @@
 // Data access for click events. Only place click queries touch Prisma.
-import { prisma } from '../lib/prisma';
+import { prisma } from '../client';
 
 export const clickRepository = {
   // Record one redirect. ipHash is already hashed by the caller.

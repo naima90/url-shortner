@@ -1,8 +1,29 @@
 // Integration tests for links + redirect + analytics. Covers the cross-tier
 // flow: create a link, visit it (redirect), and see the click recorded.
 import request from 'supertest';
+import { clickRepository } from '@url-shortner/db';
 import { createApp } from '../../src/app';
 import { resetDb, disconnectDb } from './helpers/db';
+
+// Click recording now goes through SQS -> a separate worker in production.
+// There's no worker running in this test process, so we stand in for it: the
+// mock does synchronously what the worker would do asynchronously, which
+// keeps "click just happened" assertions below meaningful without standing up
+// real AWS infra for tests.
+jest.mock('../../src/lib/sqs', () => ({
+  publishClickEvent: (payload: {
+    linkId: string;
+    referrer: string | null;
+    userAgent: string | null;
+    ipHash: string | null;
+  }) =>
+    clickRepository.create({
+      linkId: payload.linkId,
+      referrer: payload.referrer,
+      userAgent: payload.userAgent,
+      ipHash: payload.ipHash,
+    }),
+}));
 
 const app = createApp();
 

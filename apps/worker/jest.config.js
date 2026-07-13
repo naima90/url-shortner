@@ -1,6 +1,6 @@
-// Jest config for the API. Uses ts-jest so tests run TypeScript directly.
-// The moduleNameMapper points @url-shortner/shared at its TS source, so tests
-// pick up the shared schemas without a separate build step.
+// Jest config for the worker. Mirrors apps/api/jest.config.js: ts-jest so tests
+// run TypeScript directly, and @url-shortner/db mapped to its TS source so
+// tests don't need a separate build step first.
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'ts-jest',
@@ -8,10 +8,8 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/*.test.ts', '**/*.spec.ts'],
   moduleNameMapper: {
-    '^@url-shortner/shared$': '<rootDir>/../../packages/shared/src/index.ts',
     '^@url-shortner/db$': '<rootDir>/../../packages/db/src/index.ts',
   },
-  // Load test env before the suite runs.
   setupFiles: ['<rootDir>/tests/setup/loadEnv.ts'],
   clearMocks: true,
 };

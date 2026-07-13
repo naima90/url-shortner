@@ -34,6 +34,11 @@ const envSchema = z.object({
 
   RATE_LIMIT_AUTH_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().default(10),
+
+  AWS_REGION: z.string().default('eu-west-2'),
+  CLICK_EVENTS_QUEUE_URL: z.string().url(),
+
+  REDIS_URL: z.string().url(),
 });
 
 // Validate now. On failure, print what is wrong and stop.

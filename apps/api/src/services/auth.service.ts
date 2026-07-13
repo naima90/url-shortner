@@ -3,8 +3,7 @@
 // and throws typed errors that the controller and error middleware turn into
 // responses. That separation is what makes it easy to unit test.
 import type { UserDto } from '@url-shortner/shared';
-import { userRepository } from '../repositories/user.repository';
-import { refreshTokenRepository } from '../repositories/refreshToken.repository';
+import { userRepository, refreshTokenRepository } from '@url-shortner/db';
 import { hashPassword, verifyPassword, hashToken } from '../lib/hash';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
 import { ConflictError, UnauthorizedError } from '../errors/httpErrors';

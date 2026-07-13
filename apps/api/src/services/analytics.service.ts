@@ -1,26 +1,29 @@
 // Business logic for analytics: recording a click, and building the per-link
 // analytics view (total, clicks-per-day, recent activity).
 import type { LinkAnalyticsDto, DailyClickDto, ClickEventDto } from '@url-shortner/shared';
-import { clickRepository } from '../repositories/click.repository';
-import { linkRepository } from '../repositories/link.repository';
+import { clickRepository, linkRepository } from '@url-shortner/db';
 import { hashIp } from '../lib/hash';
+import { publishClickEvent } from '../lib/sqs';
 import { ForbiddenError, NotFoundError } from '../errors/httpErrors';
 
 // Default window for the chart: the last 30 days.
 const DEFAULT_WINDOW_DAYS = 30;
 
 export const analyticsService = {
-  // Record one redirect. The IP is hashed here, never stored raw.
-  // This is awaited by the redirect controller inside a try/catch, so a failure
-  // to record a click never blocks the actual redirect.
+  // Record one redirect. The IP is hashed here, never stored raw, and the
+  // event is published to SQS rather than written to Postgres directly — a
+  // worker (apps/worker) does the actual write. This is awaited by the
+  // redirect controller inside a try/catch, so a failure to record a click
+  // never blocks the actual redirect.
   async recordClick(input: {
     linkId: string;
     referrer?: string | null;
     userAgent?: string | null;
     ip?: string | null;
   }): Promise<void> {
-    await clickRepository.create({
+    await publishClickEvent({
       linkId: input.linkId,
+      clickedAt: new Date().toISOString(),
       referrer: input.referrer ?? null,
       userAgent: input.userAgent ?? null,
       ipHash: input.ip ? hashIp(input.ip) : null,

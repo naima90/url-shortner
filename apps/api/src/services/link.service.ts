@@ -2,8 +2,9 @@
 // Handles short-code generation, custom-alias collision checks, and ownership.
 import type { LinkDto } from '@url-shortner/shared';
 import { RESERVED_ALIAS_SET } from '@url-shortner/shared';
-import { linkRepository } from '../repositories/link.repository';
+import { linkRepository } from '@url-shortner/db';
 import { generateShortCode } from '../lib/shortCode';
+import { invalidateLinkCache } from '../lib/linkCache';
 import { ConflictError, ForbiddenError, NotFoundError, BadRequestError } from '../errors/httpErrors';
 import { env } from '../config/env';
 
@@ -104,5 +105,7 @@ export const linkService = {
       throw new ForbiddenError('You do not own this link');
     }
     await linkRepository.delete(linkId);
+    // Otherwise a cached redirect would keep serving this code until the TTL expires.
+    await invalidateLinkCache(link.code);
   },
 };

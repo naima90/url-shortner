@@ -1,6 +1,6 @@
 // Data access for refresh tokens. Tokens are stored hashed (see lib/hash.ts),
 // so this layer only ever sees the hash, never the raw token.
-import { prisma } from '../lib/prisma';
+import { prisma } from '../client';
 
 export const refreshTokenRepository = {
   create(data: { userId: string; tokenHash: string; expiresAt: Date }) {

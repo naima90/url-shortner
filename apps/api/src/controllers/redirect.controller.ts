@@ -1,18 +1,36 @@
 // HTTP layer for the public redirect. This is what runs when someone visits a
 // short link like http://localhost:4000/aX9kf2. It is unauthenticated and needs
-// to be fast, so it does the minimum: look up the code, record the click, redirect.
+// to be fast, so it does the minimum: look up the code (via a Redis cache-aside
+// ahead of Postgres), record the click, redirect.
 import type { Request, Response, NextFunction } from 'express';
-import { linkRepository } from '../repositories/link.repository';
+import { linkRepository } from '@url-shortner/db';
 import { analyticsService } from '../services/analytics.service';
 import { NotFoundError } from '../errors/httpErrors';
 import { logger } from '../lib/logger';
+import { getCachedLink, setCachedLink, type CachedLink } from '../lib/linkCache';
+
+async function findLinkByCode(code: string): Promise<CachedLink | null> {
+  const cached = await getCachedLink(code);
+  if (cached) {
+    return cached;
+  }
+
+  const link = await linkRepository.findByCode(code);
+  if (!link) {
+    return null;
+  }
+
+  const value: CachedLink = { id: link.id, originalUrl: link.originalUrl };
+  await setCachedLink(code, value);
+  return value;
+}
 
 export const redirectController = {
   // GET /:code
   async redirect(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { code } = req.params;
-      const link = await linkRepository.findByCode(code);
+      const link = await findLinkByCode(code);
       if (!link) {
         // Unknown code: 404. (An "expired link" case would also live here once
         // expiry is enforced; for now expiresAt is not checked.)
